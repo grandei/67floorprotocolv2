@@ -253,7 +253,7 @@
         <div class="modal-content">
             <h2 style="font-family: 'Syncopate';">PAUSED</h2>
             <button class="btn-next" style="width:100%; margin-bottom:10px;" onclick="togglePause()">RESUME</button>
-            <button class="btn-ghost" style="width:100%;" onclick="quitToMenu()">RETURN TO MENU</button>
+            <button class="btn-ghost" style="width:100%;" onclick="pauseMenu()">RETURN TO MENU</button>
         </div>
     </div>
 
@@ -268,6 +268,9 @@
                 <div class="stat-item"><div class="label">Penalty Added</div><div class="value" id="res-penalty">--</div></div>
             </div>
             <button class="btn-next" onclick="nextLevel()">NEXT FLOOR</button>
+            <br>
+            <br>
+            <button class="btn-next" onclick="quitToMenu()">QUIT</button>
         </div>
     </div>
 
@@ -440,21 +443,46 @@
         }
 
         function fullReset(keepLevel = false) {
-            if (state.frameId) cancelAnimationFrame(state.frameId);
-            state.frameId = null;
+            // 1. Force hide all modals and reset their look
+            const winModal = document.getElementById('win-overlay');
+            const pauseModal = document.getElementById('pause-overlay');
+            
+            winModal.style.display = 'none';
+            winModal.style.opacity = '0';
+            pauseModal.style.display = 'none';
+            pauseModal.style.opacity = '0';
+
+            // 2. Stop the engine
+            if (state.frameId) {
+                cancelAnimationFrame(state.frameId);
+                state.frameId = null;
+            }
+
+            // 3. Reset game state
+            state.active = false;
+            state.paused = false;
+            state.gameStarted = false;
             const savedLevel = state.level;
-            const savedDiff = state.difficulty;
-            state.active = false; state.paused = false; state.gameStarted = false;
-            state.floor = 0; state.streak = 0; state.maxStreak = 0; 
-            state.penaltySeconds = 0; state.mistakes = 0;
-            state.camY = 0; state.targetCamY = 0; state.playerX = -150; state.targetX = -150;
-            state.playerRot = 0; state.targetRot = 0;
-            state.totalPauseOffset = 0; state.ghosts = []; state.particles = [];
+            state.floor = 0; 
+            state.streak = 0; 
+            state.maxStreak = 0; 
+            state.penaltySeconds = 0; 
+            state.mistakes = 0;
+            state.camY = 0; 
+            state.targetCamY = 0; 
+            state.playerX = -150; 
+            state.targetX = -150;
+            state.playerRot = 0; 
+            state.targetRot = 0;
+            state.totalPauseOffset = 0;
+            state.ghosts = []; 
+            state.particles = []; 
+            state.celebs = [];
+            
             state.level = keepLevel ? savedLevel : 1;
-            state.difficulty = savedDiff;
-            state.speedMultiplier = 1;
-            state.perfectCount = 0;
-            bgm.pause(); bgm.currentTime = 0;
+            
+            bgm.pause(); 
+            bgm.currentTime = 0;
             updateUI();
         }
 
@@ -476,6 +504,7 @@
         }
 
         function initGame() {
+            fullReset(false);
             document.getElementById('start-overlay').style.display = 'none';
             document.getElementById('ingame-menu-btn').style.display = 'block';
             bgm.src = state.config.music;
@@ -493,7 +522,7 @@
 
         function generatePlatforms() {
             state.platforms = [];
-            const floorCount = state.difficulty === 'easy' ? 34 : (state.difficulty === 'normal' ? 67 : 100);
+            const floorCount = state.difficulty === 'easy' ? 41 : (state.difficulty === 'normal' ? 67 : 6741);
             for (let i = 0; i < floorCount; i++) {
                 state.platforms.push({ id: i + 1, side: Math.random() > 0.5 ? 1 : 0, y: -(i * 180) });
             }
@@ -765,9 +794,16 @@
         }
 
         function quitToMenu() {
-            fullReset(false);
-            document.getElementById('pause-overlay').style.display = 'none';
+            fullReset(false); // Clears everything and stops the loop
+            const pauseEl = document.getElementById('pause-overlay');
+            pauseEl.style.display = 'none';
+            pauseEl.style.opacity = '0';
             document.getElementById('start-overlay').style.display = 'flex';
+            document.getElementById('ingame-menu-btn').style.display = 'none';
+        }
+
+        function pauseMenu() {
+            togglePause();
         }
     </script>
 </body>
