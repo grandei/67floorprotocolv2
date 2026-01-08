@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>67 | FLOOR PROTOCOL (ENHANCED)</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=JetBrains+Mono:wght@500&display=swap');
+
+        :root { 
+            --neon-blue: #00f2ff; 
+            --neon-pink: #ff007b; 
+            --neon-green: #00ff88;
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; background: #000;
+            font-family: 'JetBrains Mono', monospace;
+            color: #fff;
+        }
+
+        #ui-layer {
+            position: fixed; inset: 0; pointer-events: none; z-index: 10;
+            display: flex; flex-direction: column; justify-content: space-between;
+            padding: 40px; box-sizing: border-box;
+        }
+
+        .stat-label { color: #444; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; }
+        .stat-val { color: #fff; font-family: 'Syncopate'; font-size: 1.8rem; display: block; }
+        .accent-blue { color: var(--neon-blue); }
+        .accent-pink { color: var(--neon-pink); }
+        .accent-green { color: var(--neon-green); }
+
+        #combo-display {
+            position: absolute; left: 50%; top: 30%;
+            transform: translateX(-50%) scale(0);
+            font-family: 'Syncopate'; font-size: 3rem;
+            color: var(--neon-green);
+            text-shadow: 0 0 20px var(--neon-green);
+            pointer-events: none; opacity: 0;
+        }
+
+        .combo-pop { animation: comboPop 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+        @keyframes comboPop {
+            0% { transform: translateX(-50%) scale(0); opacity: 0; }
+            50% { transform: translateX(-50%) scale(1.2); opacity: 1; }
+            100% { transform: translateX(-50%) scale(0.8); opacity: 0; }
+        }
+
+        #penalty-alert {
+            position: absolute; right: 40px; bottom: 85px;
+            color: var(--neon-pink); font-family: 'Syncopate'; font-size: 1.2rem;
+            opacity: 0; pointer-events: none;
+        }
+
+        .animate-penalty { animation: penaltyRise 0.6s ease-out forwards; }
+        @keyframes penaltyRise {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-30px); opacity: 0; }
+        }
+
+        .progress-bar {
+            position: absolute; top: 50%; right: 40px;
+            transform: translateY(-50%);
+            width: 8px; height: 60vh; background: #111;
+            border: 1px solid #333; pointer-events: auto;
+        }
+
+        .progress-fill {
+            position: absolute; bottom: 0; width: 100%;
+            background: linear-gradient(to top, var(--neon-blue), var(--neon-pink));
+            transition: height 0.3s ease;
+        }
+
+        .btn-next {
+            background: #fff; color: #000; border: none;
+            padding: 15px 40px; font-family: 'Syncopate';
+            cursor: pointer; transition: 0.3s; pointer-events: auto;
+        }
+        .btn-next:hover { background: var(--neon-blue); transform: scale(1.05); }
+
+        .btn-ghost {
+            background: transparent; color: #666; border: 1px solid #333;
+            padding: 8px 20px; font-family: 'JetBrains Mono'; font-size: 0.7rem;
+            cursor: pointer; transition: 0.3s; letter-spacing: 2px; pointer-events: auto;
+        }
+        .btn-ghost:hover { color: #fff; border-color: #fff; }
+
+        #ingame-menu-btn { position: absolute; bottom: 110px; left: 40px; display: none; }
+
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.95);
+            backdrop-filter: blur(15px); z-index: 100;
+            display: none; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.4s ease;
+        }
+
+        .modal-content {
+            background: rgba(10, 10, 10, 0.98); border: 1px solid #222;
+            padding: 40px; text-align: center; color: #fff; width: 90%; max-width: 500px;
+        }
+
+        .setting-group { margin-bottom: 20px; text-align: left; }
+        label { display: block; font-size: 0.6rem; color: #555; margin-bottom: 5px; text-transform: uppercase; }
+        select, input[type="text"] {
+            width: 100%; background: #000; border: 1px solid #333; color: #fff; 
+            padding: 10px; font-family: 'JetBrains Mono'; outline: none; box-sizing: border-box;
+        }
+        input[type="color"] { width: 100%; height: 40px; background: none; border: 1px solid #333; cursor: pointer; }
+
+        #start-overlay {
+            position: fixed; inset: 0; background: #000; z-index: 200; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+        }
+
+        canvas { display: block; image-rendering: pixelated; }
+
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 30px 0; text-align: left; }
+        .stat-item { border-left: 1px solid #222; padding-left: 15px; }
+        .stat-item .label { color: #555; font-size: 0.6rem; text-transform: uppercase; margin-bottom: 5px; }
+        .stat-item .value { font-family: 'Syncopate'; font-size: 1.1rem; color: #fff; }
+
+        .difficulty-select {
+            display: flex; gap: 15px; margin: 30px 0; justify-content: center;
+        }
+
+        .difficulty-btn {
+            background: transparent; border: 2px solid #333;
+            padding: 15px 30px; font-family: 'Syncopate'; font-size: 0.9rem;
+            color: #666; cursor: pointer; transition: 0.3s; text-transform: uppercase;
+        }
+
+        .difficulty-btn:hover { border-color: #fff; color: #fff; }
+        .difficulty-btn.selected { border-color: var(--neon-blue); color: var(--neon-blue); background: rgba(0, 242, 255, 0.1); }
+
+        #speed-indicator {
+            position: absolute; left: 40px; top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.7rem; color: #555; text-transform: uppercase;
+            pointer-events: none;
+        }
+
+        .speed-bar {
+            width: 4px; height: 200px; background: #111;
+            border: 1px solid #222; margin-top: 10px;
+            position: relative; overflow: hidden;
+        }
+
+        .speed-fill {
+            position: absolute; bottom: 0; width: 100%;
+            background: var(--neon-green);
+            transition: height 0.3s ease;
+        }
+
+        #tutorial-hint {
+            position: absolute; left: 50%; bottom: 30%;
+            transform: translateX(-50%);
+            text-align: center; font-size: 1rem;
+            color: #666; pointer-events: none;
+            opacity: 0; transition: opacity 0.3s;
+        }
+
+        .rank-display {
+            margin: 20px 0;
+            font-family: 'Syncopate';
+            font-size: 3rem;
+            color: var(--neon-blue);
+            text-shadow: 0 0 30px var(--neon-blue);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui-layer">
+        <div style="display: flex; justify-content: space-between;">
+            <div><span class="stat-label">System Level</span><span class="stat-val accent-blue" id="lvl-txt">01</span></div>
+            <div style="text-align: right;"><span class="stat-label">Floor</span><span class="stat-val" id="floor-txt">01 / 67</span></div>
+        </div>
+
+        <div id="combo-display">COMBO x0</div>
+
+        <div class="progress-bar" title="Progress">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+
+        <div id="speed-indicator">
+            <div>VELOCITY</div>
+            <div class="speed-bar"><div class="speed-fill" id="speed-fill"></div></div>
+        </div>
+
+        <button id="ingame-menu-btn" class="btn-ghost" onclick="togglePause()">[ MENU ]</button>
+
+        <div id="tutorial-hint">← LEFT or RIGHT → to jump</div>
+
+        <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+            <div><span class="stat-label">Active Streak</span><span class="stat-val accent-pink" id="streak-txt">0</span></div>
+            <div style="text-align: right; position: relative;">
+                <div id="penalty-alert">+1 SEC</div>
+                <span class="stat-label">Timer</span><span class="stat-val" id="time-txt">0.00s</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-overlay" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="font-family: 'Syncopate'; margin-top:0;">SETTINGS</h2>
+            <div class="setting-group"><label>Music Filename</label><input type="text" id="cfg-music" value="bgm.mp3"></div>
+            
+            <div class="setting-group">
+                <label>Environment Style</label>
+                <select id="cfg-bg">
+                    <option value="none">VOID (BLACK)</option>
+                    <option value="grid" selected>DIGITAL HORIZON</option>
+                    <option value="stars">STARFIELD</option>
+                    <option value="scanlines">SCANLINES</option>
+                </select>
+            </div>
+
+            <div class="setting-group">
+                <label>Core Shape</label>
+                <select id="cfg-shape">
+                    <option value="square">BLOCK CORE</option>
+                    <option value="circle">ORB CORE</option>
+                    <option value="diamond">PRISM CORE</option>
+                </select>
+            </div>
+
+            <div class="setting-group">
+                <label>Tail Pattern</label>
+                <select id="cfg-tail">
+                    <option value="solid">SOLID TRAIL</option>
+                    <option value="ghost" selected>GHOST TRAIL</option>
+                    <option value="wire">WIRE TRAIL</option>
+                </select>
+            </div>
+
+            <div class="setting-group">
+                <label>Particle Physics</label>
+                <select id="cfg-particles">
+                    <option value="square">DIGITAL DEBRIS</option>
+                    <option value="line">VELOCITY LINES</option>
+                    <option value="dust">NEON DUST</option>
+                </select>
+            </div>
+
+            <div class="setting-group"><label>Theme Color</label><input type="color" id="cfg-color1" value="#00f2ff"></div>
+            <button class="btn-next" onclick="saveSettings()">SAVE & EXIT</button>
+        </div>
+    </div>
+
+    <div id="pause-overlay" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="font-family: 'Syncopate';">PAUSED</h2>
+            <button class="btn-next" style="width:100%; margin-bottom:10px;" onclick="togglePause()">RESUME</button>
+            <button class="btn-ghost" style="width:100%;" onclick="quitToMenu()">RETURN TO MENU</button>
+        </div>
+    </div>
+
+    <div id="win-overlay" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="font-family: 'Syncopate'; margin-bottom:10px;">LEVEL COMPLETE</h2>
+            <div class="rank-display" id="rank-display">S</div>
+            <div class="stats-grid">
+                <div class="stat-item"><div class="label">Total Time</div><div class="value" id="res-time">--</div></div>
+                <div class="stat-item"><div class="label">Max Streak</div><div class="value" id="res-streak">--</div></div>
+                <div class="stat-item"><div class="label">Mistakes</div><div class="value" id="res-mistakes">--</div></div>
+                <div class="stat-item"><div class="label">Penalty Added</div><div class="value" id="res-penalty">--</div></div>
+            </div>
+            <button class="btn-next" onclick="nextLevel()">NEXT FLOOR</button>
+        </div>
+    </div>
+
+    <div id="start-overlay">
+        <h1 style="font-family:'Syncopate'; font-size:5rem; margin:0;">67</h1>
+        <p style="letter-spacing:8px; color:var(--neon-blue); margin-bottom:20px;">FLOOR PROTOCOL</p>
+        <p style="color: #666; font-size: 0.8rem; margin-bottom: 40px;">SELECT DIFFICULTY</p>
+        
+        <div class="difficulty-select">
+            <button class="difficulty-btn" onclick="selectDifficulty('easy')">NORMAL</button>
+            <button class="difficulty-btn selected" onclick="selectDifficulty('normal')">HARDCORE</button>
+            <button class="difficulty-btn" onclick="selectDifficulty('hard')">INSANE</button>
+        </div>
+
+        <button class="btn-next" onclick="initGame()">INITIALIZE</button>
+        <button class="btn-ghost" style="margin-top:15px;" onclick="openSettings()">SETTINGS</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const bgm = new Audio();
+        bgm.loop = true;
+
+        const ui = {
+            time: document.getElementById('time-txt'),
+            floor: document.getElementById('floor-txt'),
+            streak: document.getElementById('streak-txt'),
+            level: document.getElementById('lvl-txt'),
+            penalty: document.getElementById('penalty-alert'),
+            combo: document.getElementById('combo-display'),
+            progress: document.getElementById('progress-fill'),
+            speedFill: document.getElementById('speed-fill'),
+            tutorialHint: document.getElementById('tutorial-hint')
+        };
+
+        let state = {
+            active: false, paused: false, gameStarted: false,
+            level: 1, floor: 0, streak: 0, maxStreak: 0,
+            startTime: 0, pauseStartTime: 0, totalPauseOffset: 0,
+            penaltySeconds: 0, mistakes: 0,
+            platforms: [], particles: [], ghosts: [], stars: [],
+            camY: 0, targetCamY: 0, playerX: -150, playerY: 0, targetX: -150,
+            playerRot: 0, targetRot: 0,
+            shake: 0, tick: 0,
+            animType: 'hop', hopProgress: 0,
+            frameId: null,
+            difficulty: 'normal',
+            speedMultiplier: 1,
+            perfectCount: 0,
+            lastMoveTime: 0,
+            config: { 
+                music: 'bgm.mp3', 
+                shape: 'square', 
+                tail: 'ghost', 
+                particles: 'square', 
+                color1: '#00f2ff', 
+                bg: 'grid' 
+            }
+        };
+
+        function resize() { 
+            canvas.width = window.innerWidth; 
+            canvas.height = window.innerHeight; 
+            ctx.imageSmoothingEnabled = false;
+            state.stars = [];
+            for(let i=0; i<100; i++) state.stars.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, s: Math.random()*2});
+        }
+        window.onresize = resize;
+        resize();
+
+        function selectDifficulty(diff) {
+            state.difficulty = diff;
+            document.querySelectorAll('.difficulty-btn').forEach(btn => btn.classList.remove('selected'));
+            event.target.classList.add('selected');
+        }
+
+        function drawBackground() {
+            if (state.config.bg === 'none') return;
+            
+            if (state.config.bg === 'grid') {
+                ctx.strokeStyle = state.config.color1;
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = 0.15;
+                const scroll = (state.tick * 2) % 100;
+                for(let i = -canvas.width; i < canvas.width * 2; i += 100) {
+                    ctx.beginPath();
+                    ctx.moveTo(canvas.width/2, canvas.height/4);
+                    ctx.lineTo(i, canvas.height);
+                    ctx.stroke();
+                }
+                for(let i = 0; i < canvas.height; i += 50) {
+                    let y = ((i + scroll) % canvas.height);
+                    if (y < canvas.height/4) continue;
+                    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+                }
+            }
+            if (state.config.bg === 'stars') {
+                ctx.fillStyle = "#fff";
+                state.stars.forEach(s => {
+                    let y = (s.y + (state.camY * 0.2)) % canvas.height;
+                    if (y < 0) y += canvas.height;
+                    ctx.globalAlpha = s.s / 2;
+                    ctx.fillRect(s.x, y, s.s, s.s);
+                });
+            }
+            if (state.config.bg === 'scanlines') {
+                ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
+                for(let i=0; i<canvas.height; i+=4) ctx.fillRect(0, i, canvas.width, 1);
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        function scrambleText(elementId, targetValue, duration = 1000) {
+            const el = document.getElementById(elementId);
+            const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$#@!&*";
+            const targetStr = targetValue.toString();
+            const length = targetStr.length;
+            let currentIteration = 0;
+            const totalSteps = 30; 
+            
+            const interval = setInterval(() => {
+                let scrambled = "";
+                const progress = currentIteration / totalSteps;
+                
+                for (let i = 0; i < length; i++) {
+                    if (i < progress * length * 1.5) {
+                        scrambled += targetStr[i];
+                    } else {
+                        scrambled += chars[Math.floor(Math.random() * chars.length)];
+                    }
+                }
+                
+                el.innerText = scrambled;
+                currentIteration++;
+                
+                if (currentIteration > totalSteps) { 
+                    el.innerText = targetStr; 
+                    clearInterval(interval); 
+                }
+            }, duration / totalSteps);
+        }
+
+        function openSettings() {
+            document.getElementById('start-overlay').style.display = 'none';
+            const configMenu = document.getElementById('settings-overlay');
+            configMenu.style.display = 'flex';
+            setTimeout(() => configMenu.style.opacity = '1', 10);
+        }
+
+        function saveSettings() {
+            state.config.music = document.getElementById('cfg-music').value;
+            state.config.shape = document.getElementById('cfg-shape').value;
+            state.config.tail = document.getElementById('cfg-tail').value;
+            state.config.particles = document.getElementById('cfg-particles').value;
+            state.config.color1 = document.getElementById('cfg-color1').value;
+            state.config.bg = document.getElementById('cfg-bg').value;
+            
+            document.documentElement.style.setProperty('--neon-blue', state.config.color1);
+            
+            const configMenu = document.getElementById('settings-overlay');
+            configMenu.style.opacity = '0';
+            setTimeout(() => {
+                configMenu.style.display = 'none';
+                fullReset(false); 
+                document.getElementById('start-overlay').style.display = 'flex';
+            }, 400);
+        }
+
+        function fullReset(keepLevel = false) {
+            if (state.frameId) cancelAnimationFrame(state.frameId);
+            state.frameId = null;
+            const savedLevel = state.level;
+            const savedDiff = state.difficulty;
+            state.active = false; state.paused = false; state.gameStarted = false;
+            state.floor = 0; state.streak = 0; state.maxStreak = 0; 
+            state.penaltySeconds = 0; state.mistakes = 0;
+            state.camY = 0; state.targetCamY = 0; state.playerX = -150; state.targetX = -150;
+            state.playerRot = 0; state.targetRot = 0;
+            state.totalPauseOffset = 0; state.ghosts = []; state.particles = [];
+            state.level = keepLevel ? savedLevel : 1;
+            state.difficulty = savedDiff;
+            state.speedMultiplier = 1;
+            state.perfectCount = 0;
+            bgm.pause(); bgm.currentTime = 0;
+            updateUI();
+        }
+
+        function togglePause() {
+            if (!state.active) return;
+            state.paused = !state.paused;
+            const el = document.getElementById('pause-overlay');
+            if (state.paused) {
+                state.pauseStartTime = Date.now();
+                el.style.display = 'flex';
+                setTimeout(() => el.style.opacity = '1', 10);
+                bgm.pause();
+            } else {
+                state.totalPauseOffset += (Date.now() - state.pauseStartTime);
+                el.style.opacity = '0';
+                setTimeout(() => el.style.display = 'none', 400);
+                bgm.play();
+            }
+        }
+
+        function initGame() {
+            document.getElementById('start-overlay').style.display = 'none';
+            document.getElementById('ingame-menu-btn').style.display = 'block';
+            bgm.src = state.config.music;
+            generatePlatforms();
+            state.active = true;
+            state.gameStarted = false;
+            bgm.play().catch(() => {});
+            if (state.frameId) cancelAnimationFrame(state.frameId);
+            state.frameId = requestAnimationFrame(loop);
+            updateUI();
+            
+            ui.tutorialHint.style.opacity = '1';
+            setTimeout(() => { ui.tutorialHint.style.opacity = '0'; }, 3000);
+        }
+
+        function generatePlatforms() {
+            state.platforms = [];
+            const floorCount = state.difficulty === 'easy' ? 34 : (state.difficulty === 'normal' ? 67 : 100);
+            for (let i = 0; i < floorCount; i++) {
+                state.platforms.push({ id: i + 1, side: Math.random() > 0.5 ? 1 : 0, y: -(i * 180) });
+            }
+            state.platforms[0].side = 0; 
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'r' && state.active) { fullReset(true); initGame(); return; }
+            if (!state.active || state.paused) return;
+            
+            let input = (e.key === 'ArrowLeft') ? 0 : (e.key === 'ArrowRight' ? 1 : -1);
+            if (input !== -1) {
+                if (!state.gameStarted) { 
+                    state.startTime = Date.now(); 
+                    state.gameStarted = true;
+                    ui.tutorialHint.style.opacity = '0';
+                }
+                const nextFloorIdx = state.floor + 1;
+                const maxFloors = state.platforms.length;
+                if (nextFloorIdx >= maxFloors) return;
+
+                if (input === state.platforms[nextFloorIdx].side) {
+                    const currentTime = Date.now();
+                    const timeSinceLastMove = currentTime - state.lastMoveTime;
+                    state.lastMoveTime = currentTime;
+
+                    const isPerfect = timeSinceLastMove < 400 && state.streak > 0;
+                    if (isPerfect) state.perfectCount++;
+
+                    const isNewSide = (input === 0 && state.targetX !== -150) || (input === 1 && state.targetX !== 150);
+                    state.animType = isNewSide ? 'arch' : 'hop';
+                    
+                    state.targetRot += 90; 
+                    if (!isNewSide) state.hopProgress = 1.0; 
+
+                    state.floor = nextFloorIdx;
+                    state.streak++;
+                    if (state.streak > state.maxStreak) state.maxStreak = state.streak;
+                    state.targetX = (input === 0) ? -150 : 150;
+                    state.targetCamY = state.floor * 180;
+                    state.shake = 10;
+                    spawnGlitter(state.targetX, 0, input);
+
+                    // Speed boost system
+                    if (state.streak % 5 === 0 && state.streak > 0) {
+                        state.speedMultiplier = Math.min(state.speedMultiplier + 0.1, 2.5);
+                    }
+
+                    // Combo display
+                    if (state.streak % 10 === 0 && state.streak > 0) {
+                        showCombo(state.streak);
+                    }
+                } else {
+                    state.streak = 0; 
+                    state.shake = 25; 
+                    state.penaltySeconds += (state.difficulty === 'hard' ? 2 : 1);
+                    state.mistakes += 1;
+                    state.speedMultiplier = Math.max(state.speedMultiplier - 0.2, 0.8);
+                    state.perfectCount = 0;
+                    ui.penalty.classList.remove('animate-penalty');
+                    void ui.penalty.offsetWidth; 
+                    ui.penalty.classList.add('animate-penalty');
+                }
+                updateUI();
+            }
+        });
+
+        function showCombo(streak) {
+            ui.combo.innerText = `COMBO x${streak}`;
+            ui.combo.classList.remove('combo-pop');
+            void ui.combo.offsetWidth;
+            ui.combo.classList.add('combo-pop');
+        }
+
+        function spawnGlitter(x, y, side) {
+            const count = state.config.particles === 'dust' ? 40 : 20;
+            const color = side === 0 ? state.config.color1 : '#ff007b';
+            for(let i=0; i<count; i++) {
+                state.particles.push({
+                    x, y,
+                    vx: (side === 0 ? -1 : 1) * Math.random() * 15,
+                    vy: (Math.random() - 0.5) * 15,
+                    life: 1.0, color
+                });
+            }
+        }
+
+        function drawCore(x, y, size, rotation, isGhost = false, alpha = 1) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(rotation * Math.PI / 180);
+            ctx.globalAlpha = alpha;
+            
+            const s = size / 2;
+            const color = state.targetX < 0 ? state.config.color1 : "#ff007b";
+            
+            ctx.strokeStyle = isGhost ? color : "#fff";
+            ctx.lineWidth = isGhost ? 1 : 2;
+            ctx.shadowBlur = isGhost ? 0 : 15;
+            ctx.shadowColor = color;
+
+            if (state.config.shape === 'circle') {
+                ctx.beginPath(); ctx.arc(0, 0, s, 0, Math.PI*2); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(-s, 0); ctx.lineTo(s, 0); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, -s); ctx.lineTo(0, s); ctx.stroke();
+            } else if (state.config.shape === 'diamond') {
+                ctx.beginPath();
+                ctx.moveTo(0, -s*1.2); ctx.lineTo(s*1.2, 0); ctx.lineTo(0, s*1.2); ctx.lineTo(-s*1.2, 0);
+                ctx.closePath(); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(-s*1.2, 0); ctx.lineTo(s*1.2, 0); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, -s*1.2); ctx.lineTo(0, s*1.2); ctx.stroke();
+            } else {
+                ctx.strokeRect(-s, -s, size, size);
+                ctx.lineWidth = isGhost ? 0.5 : 1;
+                ctx.beginPath();
+                ctx.moveTo(-s/3, -s); ctx.lineTo(-s/3, s);
+                ctx.moveTo(s/3, -s); ctx.lineTo(s/3, s);
+                ctx.moveTo(-s, -s/3); ctx.lineTo(s, -s/3);
+                ctx.moveTo(-s, s/3); ctx.lineTo(s, s/3);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        function loop() {
+            if (!state.active && !state.paused) return;
+
+            if (!state.paused) {
+                state.tick++;
+                const smoothing = 0.15 * state.speedMultiplier;
+                state.camY += (state.targetCamY - state.camY) * smoothing;
+                state.playerX += (state.targetX - state.playerX) * 0.2;
+                state.playerRot += (state.targetRot - state.playerRot) * 0.15;
+
+                if (state.animType === 'arch') {
+                    let jumpDist = Math.abs(state.targetX - state.playerX);
+                    let jumpProgress = 1 - (jumpDist / 300);
+                    state.playerY = -150 * 4 * jumpProgress * (1 - jumpProgress);
+                } else {
+                    state.playerY = -70 * Math.sin(state.hopProgress * Math.PI);
+                    state.hopProgress *= 0.85; 
+                }
+
+                if (state.shake > 0) state.shake *= 0.9;
+                state.ghosts.unshift({x: state.playerX, y: state.playerY, r: state.playerRot});
+                if (state.ghosts.length > 30) state.ghosts.pop();
+
+                if (state.gameStarted && state.active) {
+                    const rawTime = (Date.now() - state.startTime - state.totalPauseOffset) / 1000;
+                    ui.time.innerText = (rawTime + state.penaltySeconds).toFixed(2) + "s";
+                    
+                    const maxFloors = state.platforms.length;
+                    const progress = (state.floor + 1) / maxFloors;
+                    ui.progress.style.height = (progress * 100) + '%';
+                    ui.speedFill.style.height = ((state.speedMultiplier - 0.8) / 1.7 * 100) + '%';
+                    
+                    if (state.floor === maxFloors - 1 && Math.abs(state.playerX - state.targetX) < 2) triggerWin();
+                }
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#000"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawBackground();
+
+            ctx.save();
+            ctx.translate(canvas.width/2 + (Math.random()-0.5)*state.shake, canvas.height * 0.75 + (Math.random()-0.5)*state.shake);
+            
+            // Platforms with preview indicators
+            state.platforms.forEach((p, i) => {
+                const drawY = p.y + state.camY;
+                if (drawY > -canvas.height && drawY < 400) {
+                    const xPos = (p.side === 0) ? -280 : 80;
+                    
+                    // Highlight next platform
+                    if (i === state.floor + 1) {
+                        ctx.fillStyle = p.side === 0 ? state.config.color1 : '#ff007b';
+                        ctx.globalAlpha = 0.3 + Math.sin(state.tick * 0.1) * 0.2;
+                        ctx.fillRect(xPos - 10, drawY - 5, 220, 20);
+                        ctx.globalAlpha = 1;
+                    }
+                    
+                    ctx.fillStyle = (i >= state.floor) ? "#fff" : "#1a1a1a";
+                    ctx.fillRect(xPos, drawY, 200, (i === state.floor + 1) ? 10 : 6);
+                    
+                    // Platform numbers
+                    if (i === state.floor + 1 && i < 10) {
+                        ctx.fillStyle = "#666";
+                        ctx.font = "10px 'JetBrains Mono'";
+                        ctx.textAlign = "center";
+                        ctx.fillText((i + 1).toString(), xPos + 100, drawY - 10);
+                    }
+                }
+            });
+
+            // Tail logic
+            if (state.config.tail !== 'solid') {
+                state.ghosts.forEach((g, i) => {
+                    const ratio = (1 - i / state.ghosts.length);
+                    drawCore(g.x, g.y - 20, 40 * ratio, g.r, state.config.tail === 'wire', 0.4 * ratio);
+                });
+            }
+
+            // Player
+            drawCore(state.playerX, state.playerY - 20, 45, state.playerRot, false, 1);
+
+            // Particles
+            for (let i = state.particles.length - 1; i >= 0; i--) {
+                const p = state.particles[i];
+                ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.strokeStyle = p.color;
+                if (state.config.particles === 'line') {
+                    ctx.beginPath(); ctx.moveTo(p.x, p.y + state.playerY);
+                    ctx.lineTo(p.x - p.vx * 2, (p.y + state.playerY) - p.vy * 2); ctx.stroke();
+                } else if (state.config.particles === 'dust') {
+                    ctx.beginPath(); ctx.arc(p.x, p.y + state.playerY, 2, 0, Math.PI*2); ctx.fill();
+                } else { ctx.fillRect(p.x, p.y + state.playerY, 4, 4); }
+                if (!state.paused) { p.x += p.vx; p.y += p.vy; p.vy += 0.5; p.life -= 0.02; }
+                if (p.life <= 0) state.particles.splice(i, 1);
+            }
+            ctx.restore();
+
+            state.frameId = requestAnimationFrame(loop);
+        }
+
+        function updateUI() {
+            ui.level.innerText = state.level.toString().padStart(2, '0');
+            const maxFloors = state.platforms.length;
+            ui.floor.innerText = `${(state.floor + 1).toString().padStart(2, '0')} / ${maxFloors}`;
+            ui.streak.innerText = state.streak;
+        }
+
+        function calculateRank(finalTime, mistakes, maxStreak) {
+            const floorCount = state.platforms.length;
+            const avgTimePerFloor = finalTime / floorCount;
+            
+            if (mistakes === 0 && avgTimePerFloor < 0.5 && maxStreak === floorCount - 1) return 'S+';
+            if (mistakes === 0 && avgTimePerFloor < 0.7) return 'S';
+            if (mistakes <= 2 && avgTimePerFloor < 1.0) return 'A';
+            if (mistakes <= 5 && avgTimePerFloor < 1.5) return 'B';
+            if (mistakes <= 10) return 'C';
+            return 'D';
+        }
+
+        function triggerWin() {
+            state.active = false;
+            document.getElementById('ingame-menu-btn').style.display = 'none';
+            
+            const rawTime = (Date.now() - state.startTime - state.totalPauseOffset) / 1000;
+            const finalTime = (rawTime + state.penaltySeconds).toFixed(2);
+            const rank = calculateRank(parseFloat(finalTime), state.mistakes, state.maxStreak);
+            
+            const el = document.getElementById('win-overlay');
+            el.style.display = 'flex';
+            
+            setTimeout(() => {
+                el.style.opacity = '1';
+                document.getElementById('rank-display').innerText = rank;
+                scrambleText('res-time', finalTime + "S");
+                scrambleText('res-streak', state.maxStreak);
+                scrambleText('res-mistakes', state.mistakes);
+                scrambleText('res-penalty', "+" + state.penaltySeconds + "S");
+            }, 100);
+        }
+
+        function nextLevel() {
+            state.level++;
+            document.getElementById('win-overlay').style.display = 'none';
+            fullReset(true); initGame();
+        }
+
+        function quitToMenu() {
+            fullReset(false);
+            document.getElementById('pause-overlay').style.display = 'none';
+            document.getElementById('start-overlay').style.display = 'flex';
+        }
+    </script>
+</body>
+</html>
