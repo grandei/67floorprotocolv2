@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>67 | FLOOR PROTOCOL (ENHANCED)</title>
+    <title>67 | FLOOR PROTOCOL v2</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=JetBrains+Mono:wght@500&display=swap');
 
@@ -173,6 +173,7 @@
 <body>
 
     <div id="ui-layer">
+
         <div style="display: flex; justify-content: space-between;">
             <div><span class="stat-label">System Level</span><span class="stat-val accent-blue" id="lvl-txt">01</span></div>
             <div style="text-align: right;"><span class="stat-label">Floor</span><span class="stat-val" id="floor-txt">01 / 67</span></div>
@@ -253,6 +254,7 @@
         <div class="modal-content">
             <h2 style="font-family: 'Syncopate';">PAUSED</h2>
             <button class="btn-next" style="width:100%; margin-bottom:10px;" onclick="togglePause()">RESUME</button>
+            <button class="btn-ghost" style="width:100%; margin-bottom:10px; color: var(--neon-blue); border-color: var(--neon-blue);" onclick="fullReset(true); initGame();">RESTART FLOOR [R]</button>
             <button class="btn-ghost" style="width:100%;" onclick="quitToMenu()">RETURN TO MENU</button>
         </div>
     </div>
@@ -530,6 +532,15 @@
         }
 
         window.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+
+            // RETRY LOGIC: Works if game is active OR paused
+            if (key === 'r' && (state.active || state.paused)) { 
+                fullReset(true); 
+                initGame(); 
+                return; 
+            }
+
             if (e.key.toLowerCase() === 'r' && state.active) { fullReset(true); initGame(); return; }
             if (!state.active || state.paused) return;
             
